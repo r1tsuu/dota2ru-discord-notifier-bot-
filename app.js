@@ -10,7 +10,7 @@ const io = require('socket.io-client');
 
 const startCommand = '!login';
 const stopCommand = '!stop';
-const awaitMessagesTimeout = 60000;
+const awaitMessagesTimeout = 10000;
 
 class Application {
 
@@ -42,7 +42,13 @@ class Application {
             this.message = message;
             if (this.message.content == startCommand) {
                 await this.message.author.send("Type your forum_auth cookie: ")
-                this.authCookie = (await this.message.channel.awaitMessages(() => true, {max: 1, time: awaitMessagesTimeout})).first().content;
+                // Discord question for authCookie variable
+                let answer = (await this.message.channel.awaitMessages(() => true, {max: 1, time: awaitMessagesTimeout})).first();
+                if (typeof answer == 'undefined') {
+                    await this.message.author.send("Timeout exceeded, try again");
+                    return;
+                }
+                this.authCookie = answer.content;
                 await this.#wsConnect();
             }
             if (this.message.content == stopCommand) {
@@ -70,8 +76,9 @@ class Application {
         });
     
         this.socket.on('notification', async (response) => {
-            console.log(response)
-            // Replace function will remove all HTML tags from string
+            console.log(`New socket.io response for ${this.message.author.username} response from https://dota.2ru`)
+            console.log(response);
+            // The replace function will remove all HTML tags from string
             await this.message.author.send(response.description.replace(/<\/?[^>]+(>|$)/g, ""))
         });    
     }
@@ -86,7 +93,6 @@ class Application {
     }
     
 }
-
 
 (async () => {
     const app = new Application(process.env.BOT_TOKEN);
